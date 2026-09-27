@@ -210,6 +210,31 @@
     flex: 1;
     accent-color: var(--accent);
   }
+
+  .wake-lock-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .wake-lock-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,255,255,0.06);
+    color: var(--text-dim);
+    font-size: 0.8rem;
+    padding: 10px 18px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .wake-lock-btn.active {
+    color: var(--accent);
+    border-color: var(--accent-dim);
+  }
+  .wake-lock-btn:disabled {
+    opacity: 0.35;
+  }
 </style>
 </head>
 <body>
@@ -249,6 +274,13 @@
       <button id="muteBtn" class="mute-btn" title="Mute gong">🔔</button>
       <input id="volumeSlider" type="range" min="0" max="100" value="70" />
     </div>
+
+    <div class="wake-lock-row">
+      <button id="wakeLockBtn" class="wake-lock-btn">
+        <span id="wakeLockIcon">🌙</span>
+        <span id="wakeLockLabel">Keep Screen On</span>
+      </button>
+    </div>
   </div>
 
 <script>
@@ -263,6 +295,9 @@
   const stopBtn = document.getElementById('stopBtn');
   const muteBtn = document.getElementById('muteBtn');
   const volumeSlider = document.getElementById('volumeSlider');
+  const wakeLockBtn = document.getElementById('wakeLockBtn');
+  const wakeLockIcon = document.getElementById('wakeLockIcon');
+  const wakeLockLabel = document.getElementById('wakeLockLabel');
 
   const RADIUS = 118;
   const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
@@ -464,6 +499,57 @@
     if (!running) {
       intervalLengthMs = readIntervalMinutes() * 60 * 1000;
       updateDisplay();
+    }
+  });
+
+  // --- Keep-screen-on toggle (Wake Lock API) ---
+  let wakeLockEnabled = false;
+  let wakeLockSentinel = null;
+  const wakeLockSupported = 'wakeLock' in navigator;
+
+  if (!wakeLockSupported) {
+    wakeLockBtn.disabled = true;
+    wakeLockLabel.textContent = 'Keep-awake not supported';
+  }
+
+  async function acquireWakeLock() {
+    try {
+      wakeLockSentinel = await navigator.wakeLock.request('screen');
+      wakeLockSentinel.addEventListener('release', () => {
+        wakeLockSentinel = null;
+      });
+    } catch (err) {
+      wakeLockEnabled = false;
+      updateWakeLockButton();
+    }
+  }
+
+  function releaseWakeLock() {
+    if (wakeLockSentinel) {
+      wakeLockSentinel.release();
+      wakeLockSentinel = null;
+    }
+  }
+
+  function updateWakeLockButton() {
+    wakeLockBtn.classList.toggle('active', wakeLockEnabled);
+    wakeLockIcon.textContent = wakeLockEnabled ? '☀️' : '🌙';
+    wakeLockLabel.textContent = wakeLockEnabled ? 'Screen Staying On' : 'Keep Screen On';
+  }
+
+  wakeLockBtn.addEventListener('click', () => {
+    wakeLockEnabled = !wakeLockEnabled;
+    updateWakeLockButton();
+    if (wakeLockEnabled) {
+      acquireWakeLock();
+    } else {
+      releaseWakeLock();
+    }
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (wakeLockEnabled && document.visibilityState === 'visible' && !wakeLockSentinel) {
+      acquireWakeLock();
     }
   });
 
