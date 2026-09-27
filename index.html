@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Meditation Timer</title>
+<style>
+  :root {
+    --bg-top: #0b1220;
+    --bg-bottom: #1a2740;
+    --accent: #d9b46a;
+    --accent-dim: #7a6640;
+    --text: #eae6da;
+    --text-dim: #9aa3b2;
+    --ring-track: #2a3956;
+    --danger: #b8654f;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(ellipse at top, var(--bg-bottom), var(--bg-top));
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: var(--text);
+    padding: 24px;
+  }
+
+  .app {
+    width: 100%;
+    max-width: 420px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 28px;
+  }
+
+  h1 {
+    font-weight: 300;
+    letter-spacing: 0.08em;
+    font-size: 1.4rem;
+    margin: 0;
+    color: var(--text);
+    text-transform: uppercase;
+  }
+
+  .setup-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(255,255,255,0.04);
+    padding: 10px 16px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .setup-row label {
+    font-size: 0.85rem;
+    color: var(--text-dim);
+  }
+
+  .setup-row input[type="number"] {
+    width: 70px;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--accent-dim);
+    color: var(--text);
+    font-size: 1.05rem;
+    text-align: center;
+    padding: 4px 0;
+    outline: none;
+  }
+  .setup-row input[type="number"]:focus {
+    border-bottom-color: var(--accent);
+  }
+  .setup-row input[type="number"]:disabled {
+    opacity: 0.5;
+  }
+
+  .ring-wrap {
+    position: relative;
+    width: 260px;
+    height: 260px;
+  }
+
+  svg.ring { transform: rotate(-90deg); }
+
+  .ring-track { fill: none; stroke: var(--ring-track); stroke-width: 8; }
+  .ring-progress {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 8;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.1s linear;
+  }
+
+  .ring-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .interval-time {
+    font-size: 2.6rem;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+  }
+
+  .interval-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--text-dim);
+  }
+
+  .interval-count {
+    font-size: 0.75rem;
+    color: var(--accent);
+    margin-top: 2px;
+  }
+
+  .total-row {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .total-time {
+    font-size: 1.3rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+  }
+
+  .total-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--text-dim);
+  }
+
+  .status {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    min-height: 1.2em;
+    text-align: center;
+  }
+
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  button {
+    font-family: inherit;
+    cursor: pointer;
+    border: none;
+    outline: none;
+    transition: transform 0.1s ease, opacity 0.15s ease;
+  }
+  button:active { transform: scale(0.96); }
+  button:disabled { opacity: 0.35; cursor: default; }
+  button:disabled:active { transform: none; }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #1a1408;
+    font-weight: 600;
+    font-size: 0.95rem;
+    letter-spacing: 0.04em;
+    padding: 14px 32px;
+    border-radius: 999px;
+  }
+
+  .btn-secondary {
+    background: rgba(255,255,255,0.06);
+    color: var(--text);
+    font-size: 0.85rem;
+    padding: 12px 22px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+
+  .volume-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 200px;
+  }
+
+  .mute-btn {
+    background: transparent;
+    color: var(--text-dim);
+    font-size: 1.1rem;
+    padding: 4px 8px;
+    border-radius: 8px;
+  }
+  .mute-btn.active { color: var(--accent); }
+
+  input[type="range"] {
+    flex: 1;
+    accent-color: var(--accent);
+  }
+</style>
+</head>
+<body>
+  <div class="app">
+    <h1>Meditation Timer</h1>
+
+    <div class="setup-row">
+      <label for="intervalInput">Interval (minutes)</label>
+      <input id="intervalInput" type="number" min="0.1" step="0.1" value="5" inputmode="decimal" />
+    </div>
+
+    <div class="ring-wrap">
+      <svg class="ring" width="260" height="260" viewBox="0 0 260 260">
+        <circle class="ring-track" cx="130" cy="130" r="118"></circle>
+        <circle id="ringProgress" class="ring-progress" cx="130" cy="130" r="118"></circle>
+      </svg>
+      <div class="ring-center">
+        <div class="interval-label">Current Interval</div>
+        <div id="intervalTime" class="interval-time">05:00</div>
+        <div id="intervalCount" class="interval-count">Interval 0</div>
+      </div>
+    </div>
+
+    <div class="total-row">
+      <div id="totalTime" class="total-time">00:00</div>
+      <div class="total-label">Total Elapsed</div>
+    </div>
+
+    <div id="status" class="status">Set your interval, then begin.</div>
+
+    <div class="controls">
+      <button id="startPauseBtn" class="btn-primary">Start</button>
+      <button id="stopBtn" class="btn-secondary" disabled>Stop</button>
+    </div>
+
+    <div class="volume-row">
+      <button id="muteBtn" class="mute-btn" title="Mute gong">🔔</button>
+      <input id="volumeSlider" type="range" min="0" max="100" value="70" />
+    </div>
+  </div>
+
+<script>
+(function () {
+  const intervalInput = document.getElementById('intervalInput');
+  const ringProgress = document.getElementById('ringProgress');
+  const intervalTimeEl = document.getElementById('intervalTime');
+  const intervalCountEl = document.getElementById('intervalCount');
+  const totalTimeEl = document.getElementById('totalTime');
+  const statusEl = document.getElementById('status');
+  const startPauseBtn = document.getElementById('startPauseBtn');
+  const stopBtn = document.getElementById('stopBtn');
+  const muteBtn = document.getElementById('muteBtn');
+  const volumeSlider = document.getElementById('volumeSlider');
+
+  const RADIUS = 118;
+  const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+  ringProgress.style.strokeDasharray = `${CIRCUMFERENCE}`;
+  ringProgress.style.strokeDashoffset = '0';
+
+  let audioCtx = null;
+  let muted = false;
+  let volume = 0.7;
+
+  let running = false;
+  let paused = false;
+  let intervalLengthMs = 5 * 60 * 1000;
+  let totalElapsedMs = 0;
+  let intervalElapsedMs = 0;
+  let intervalsCompleted = 0;
+  let lastTick = null;
+  let tickHandle = null;
+
+  function formatTime(ms, forceHours) {
+    const totalSeconds = Math.max(0, Math.round(ms / 1000));
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = totalSeconds % 60;
+    const pad = (n) => String(n).padStart(2, '0');
+    if (h > 0 || forceHours) return `${pad(h)}:${pad(m)}:${pad(s)}`;
+    return `${pad(m)}:${pad(s)}`;
+  }
+
+  function ensureAudioContext() {
+    if (!audioCtx) {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      audioCtx = new Ctx();
+    }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+  }
+
+  // Synthesizes a soft struck-gong tone: inharmonic partials with a long,
+  // gentle decay plus a brief filtered noise "strike", so no audio asset is needed.
+  function playGong() {
+    if (muted || volume <= 0) return;
+    const ctx = ensureAudioContext();
+    const now = ctx.currentTime;
+
+    const master = ctx.createGain();
+    master.gain.value = volume;
+    const lowpass = ctx.createBiquadFilter();
+    lowpass.type = 'lowpass';
+    lowpass.frequency.value = 2200;
+    master.connect(lowpass);
+    lowpass.connect(ctx.destination);
+
+    const fundamental = 130;
+    const partials = [1, 1.48, 2.02, 2.68, 3.41, 4.23];
+    partials.forEach((ratio, i) => {
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = fundamental * ratio;
+
+      const gain = ctx.createGain();
+      const peak = 0.5 / (i + 1);
+      const decay = 5.5 - i * 0.5;
+
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(peak, now + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + Math.max(1.5, decay));
+
+      osc.connect(gain);
+      gain.connect(master);
+      osc.start(now);
+      osc.stop(now + decay + 0.2);
+    });
+
+    // Soft noise burst for the strike transient.
+    const noiseLength = 0.25;
+    const bufferSize = Math.floor(ctx.sampleRate * noiseLength);
+    const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+    }
+    const noiseSource = ctx.createBufferSource();
+    noiseSource.buffer = noiseBuffer;
+    const noiseFilter = ctx.createBiquadFilter();
+    noiseFilter.type = 'bandpass';
+    noiseFilter.frequency.value = 900;
+    noiseFilter.Q.value = 0.6;
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.35, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + noiseLength);
+
+    noiseSource.connect(noiseFilter);
+    noiseFilter.connect(noiseGain);
+    noiseGain.connect(master);
+    noiseSource.start(now);
+  }
+
+  function updateDisplay() {
+    const remaining = intervalLengthMs - intervalElapsedMs;
+    intervalTimeEl.textContent = formatTime(remaining);
+    totalTimeEl.textContent = formatTime(totalElapsedMs);
+    intervalCountEl.textContent = `Interval ${intervalsCompleted + (running ? 1 : 0)}`;
+
+    const fraction = intervalLengthMs > 0 ? intervalElapsedMs / intervalLengthMs : 0;
+    ringProgress.style.strokeDashoffset = String(CIRCUMFERENCE * fraction);
+  }
+
+  function tick() {
+    if (!running || paused) return;
+    const now = performance.now();
+    const delta = now - lastTick;
+    lastTick = now;
+
+    totalElapsedMs += delta;
+    intervalElapsedMs += delta;
+
+    if (intervalElapsedMs >= intervalLengthMs) {
+      const overflow = intervalElapsedMs - intervalLengthMs;
+      intervalsCompleted += 1;
+      intervalElapsedMs = intervalLengthMs > 0 ? overflow % intervalLengthMs : 0;
+      playGong();
+    }
+
+    updateDisplay();
+  }
+
+  function readIntervalMinutes() {
+    const val = parseFloat(intervalInput.value);
+    if (isNaN(val) || val <= 0) return 5;
+    return val;
+  }
+
+  function start() {
+    intervalLengthMs = readIntervalMinutes() * 60 * 1000;
+    running = true;
+    paused = false;
+    lastTick = performance.now();
+    intervalInput.disabled = true;
+    startPauseBtn.textContent = 'Pause';
+    stopBtn.disabled = false;
+    statusEl.textContent = 'Meditating…';
+    ensureAudioContext();
+    tickHandle = setInterval(tick, 100);
+    updateDisplay();
+  }
+
+  function pause() {
+    paused = true;
+    startPauseBtn.textContent = 'Resume';
+    statusEl.textContent = 'Paused';
+  }
+
+  function resume() {
+    paused = false;
+    lastTick = performance.now();
+    startPauseBtn.textContent = 'Pause';
+    statusEl.textContent = 'Meditating…';
+  }
+
+  function stop() {
+    running = false;
+    paused = false;
+    if (tickHandle) clearInterval(tickHandle);
+    tickHandle = null;
+    totalElapsedMs = 0;
+    intervalElapsedMs = 0;
+    intervalsCompleted = 0;
+    intervalInput.disabled = false;
+    startPauseBtn.textContent = 'Start';
+    stopBtn.disabled = true;
+    statusEl.textContent = 'Set your interval, then begin.';
+    updateDisplay();
+  }
+
+  startPauseBtn.addEventListener('click', () => {
+    if (!running) {
+      start();
+    } else if (!paused) {
+      pause();
+    } else {
+      resume();
+    }
+  });
+
+  stopBtn.addEventListener('click', stop);
+
+  muteBtn.addEventListener('click', () => {
+    muted = !muted;
+    muteBtn.classList.toggle('active', muted);
+    muteBtn.textContent = muted ? '🔕' : '🔔';
+  });
+
+  volumeSlider.addEventListener('input', () => {
+    volume = parseInt(volumeSlider.value, 10) / 100;
+  });
+
+  intervalInput.addEventListener('change', () => {
+    if (!running) {
+      intervalLengthMs = readIntervalMinutes() * 60 * 1000;
+      updateDisplay();
+    }
+  });
+
+  updateDisplay();
+})();
+</script>
+</body>
+</html>
